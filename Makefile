@@ -1,6 +1,6 @@
-CXXFLAGS ?= -static -Dcimg_display=0 -Dcimg_use_png -O3
+CXXFLAGS ?= -Dcimg_display=0 -Dcimg_use_png -O3
 
-LDLIBS = -l:libm.a -l:libpng.a -l:libz.a
+LDLIBS = -lm -lpng -lz
 
 HEADER_FILES = src
 SOURCE_FILES = src/captcha.cpp

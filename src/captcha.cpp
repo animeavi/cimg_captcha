@@ -41,6 +41,8 @@
  #
 */
 
+#include <iostream>
+
 #ifndef cimg_debug
 #define cimg_debug 1
 #endif
@@ -58,7 +60,6 @@ int main(int argc,char **argv) {
   cimg_usage("Simple captcha generator.");
   const char *file_o       = cimg_option("-o",(const char*)0,"Output image file");
   const bool add_border    = cimg_option("-b",true,"Add border to captcha image");
-  const bool visu          = cimg_option("-visu",false,"Enable visualization if no output file");
 
   // Generate captcha text (6 char max).
   //------------------------------------
@@ -153,11 +154,13 @@ int main(int argc,char **argv) {
 
   // Write output image and captcha text
   //-------------------------------------
-  std::printf("%s\n",captcha_text);
+  // This is temporary
+  std::string text = captcha_text;
+  std::cout << text.substr(0, text.size()-1); 
+  FILE* fp = stdout;
+  captcha.save_png(fp);
+
   if (file_o) captcha.save(file_o);
-  else if (visu) {
-    CImgDisplay disp(CImg<unsigned char>(512,128,1,3,180).draw_image(128,32,captcha),captcha_text,0);
-    while (!disp.is_closed() && !disp.key()) { disp.wait(); if (disp.is_resized()) disp.resize(disp).wait(100); }
-  }
+
   return 0;
 }

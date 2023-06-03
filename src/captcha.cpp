@@ -90,10 +90,11 @@ int main(int argc,char **argv) {
   cimg_usage("Simple captcha generator.");
   const char *file_o       = cimg_option("-o",(const char*)0,"Output image file");
   const bool add_border    = cimg_option("-b",true,"Add border to captcha image");
+  const int length         = cimg_option("-l",5,"Set the length of the captcha");
 
   // Generate captcha text
   //------------------------------------
-  const char *const captcha_text = generate_random_captcha(5).c_str();
+  const char *const captcha_text = generate_random_captcha(length).c_str();
 
   // Create captcha image
   //----------------------
@@ -150,13 +151,14 @@ int main(int argc,char **argv) {
 
   // Write output image and captcha text
   //-------------------------------------
-  // This is temporary
-  std::string text = captcha_text;
-  std::cout << text.substr(0, text.size()-1); 
-  FILE* fp = stdout;
-  captcha.save_png(fp);
-
-  if (file_o) captcha.save(file_o);
+  if (file_o) {
+    std::cout << captcha_text <<std::endl;
+    captcha.save(file_o);
+  } else {
+    std::cout << captcha_text;
+    FILE* fp = stdout;
+    captcha.save_png(fp);
+  }
 
   return 0;
 }

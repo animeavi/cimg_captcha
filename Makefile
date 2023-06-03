@@ -1,4 +1,4 @@
-CXXFLAGS ?= -Dcimg_display=0 -Dcimg_use_png -O3
+CXXFLAGS ?= -std=c++17 -pedantic -Dcimg_display=0 -Dcimg_use_png -O3
 
 LDLIBS = -lm -lpng -lz
 

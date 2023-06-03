@@ -41,7 +41,13 @@
  #
 */
 
+#include <algorithm>
+#include <array>
+#include <cstring>
+#include <functional>
 #include <iostream>
+#include <random>
+#include <string>
 
 #ifndef cimg_debug
 #define cimg_debug 1
@@ -50,6 +56,30 @@
 using namespace cimg_library;
 #undef min
 #undef max
+
+// https://stackoverflow.com/a/444614
+template <typename T = std::mt19937>
+auto random_generator() -> T {
+    auto constexpr seed_bytes = sizeof(typename T::result_type) * T::state_size;
+    auto constexpr seed_len = seed_bytes / sizeof(std::seed_seq::result_type);
+    auto seed = std::array<std::seed_seq::result_type, seed_len>();
+    auto dev = std::random_device();
+    std::generate_n(begin(seed), seed_len, std::ref(dev));
+    auto seed_seq = std::seed_seq(begin(seed), end(seed));
+    return T{seed_seq};
+}
+
+auto generate_random_captcha(std::size_t len) -> std::string {
+    static constexpr auto chars =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    thread_local auto rng = random_generator<>();
+    auto dist = std::uniform_int_distribution{{}, std::strlen(chars) - 1};
+    auto result = std::string(len, '\0');
+    std::generate_n(begin(result), len, [&]() { return chars[dist(rng)]; });
+    return result;
+}
 
 // Main procedure
 //----------------
@@ -61,43 +91,9 @@ int main(int argc,char **argv) {
   const char *file_o       = cimg_option("-o",(const char*)0,"Output image file");
   const bool add_border    = cimg_option("-b",true,"Add border to captcha image");
 
-  // Generate captcha text (6 char max).
+  // Generate captcha text
   //------------------------------------
-  const char *predef_words[] = {
-    "aarrgh", "abacas", "abacus", "abakas", "abamps", "abased", "abaser", "abases", "abasia", "abated", "abater",
-    "abates", "abatis", "abator", "baobab", "barbal", "barbed", "barbel", "barber", "barbes", "barbet", "barbie",
-    "barbut", "barcas", "barded", "bardes", "bardic", "barege", "cavies", "cavils", "caving", "cavity", "cavort",
-    "cawing", "cayman", "cayuse", "ceased", "ceases", "cebids", "ceboid", "cecity", "cedarn", "dicast", "dicers",
-    "dicier", "dicing", "dicker", "dickey", "dickie", "dicots", "dictum", "didact", "diddle", "diddly", "didies",
-    "didoes", "emails", "embalm", "embank", "embark", "embars", "embays", "embeds", "embers", "emblem", "embody",
-    "emboli", "emboly", "embosk", "emboss", "fluffy", "fluids", "fluish", "fluked", "flukes", "flukey", "flumed",
-    "flumes", "flumps", "flunks", "flunky", "fluors", "flurry", "fluted", "genome", "genoms", "genres", "genros",
-    "gentes", "gentil", "gentle", "gently", "gentry", "geodes", "geodic", "geoids", "gerahs", "gerbil", "hotter",
-    "hottie", "houdah", "hounds", "houris", "hourly", "housed", "housel", "houser", "houses", "hovels", "hovers",
-    "howdah", "howdie", "inland", "inlays", "inlets", "inlier", "inmate", "inmesh", "inmost", "innage", "innate",
-    "inners", "inning", "inpour", "inputs", "inroad", "joypop", "jubbah", "jubhah", "jubile", "judder", "judged",
-    "judger", "judges", "judoka", "jugate", "jugful", "jugged", "juggle", "jugula", "knifer", "knifes", "knight",
-    "knives", "knobby", "knocks", "knolls", "knolly", "knosps", "knotty", "knouts", "knower", "knowns", "knubby",
-    "legate", "legato", "legend", "legers", "legged", "leggin", "legion", "legist", "legits", "legman", "legmen",
-    "legong", "legume", "lehuas", "mammal", "mammas", "mammee", "mammer", "mammet", "mammey", "mammie", "mammon",
-    "mamzer", "manage", "manana", "manats", "manche", "manege", "nihils", "nilgai", "nilgau", "nilled", "nimble",
-    "nimbly", "nimbus", "nimmed", "nimrod", "ninety", "ninjas", "ninons", "ninths", "niobic", "offish", "offkey",
-    "offset", "oftest", "ogdoad", "oghams", "ogival", "ogives", "oglers", "ogling", "ogress", "ogrish", "ogrism",
-    "ohmage", "papaws", "papaya", "papers", "papery", "pappus", "papula", "papule", "papyri", "parade", "paramo",
-    "parang", "paraph", "parcel", "pardah", "quasar", "quatre", "quaver", "qubits", "qubyte", "queans", "queasy",
-    "queazy", "queens", "queers", "quelea", "quells", "quench", "querns", "raised", "raiser", "raises", "raisin",
-    "raitas", "rajahs", "rakees", "rakers", "raking", "rakish", "rallye", "ralphs", "ramada", "ramate", "savory",
-    "savour", "savoys", "sawers", "sawfly", "sawing", "sawlog", "sawney", "sawyer", "saxony", "sayeds", "sayers",
-    "sayest", "sayids", "tondos", "toneme", "toners", "tongas", "tonged", "tonger", "tongue", "tonics", "tonier",
-    "toning", "tonish", "tonlet", "tonner", "tonnes", "uredia", "uredos", "ureide", "uremia", "uremic", "ureter",
-    "uretic", "urgent", "urgers", "urging", "urials", "urinal", "urines", "uropod", "villus", "vimina", "vinals",
-    "vincas", "vineal", "vinery", "vinier", "vinify", "vining", "vinous", "vinyls", "violas", "violet", "violin",
-    "webfed", "weblog", "wechts", "wedded", "wedder", "wedeln", "wedels", "wedged", "wedges", "wedgie", "weeded",
-    "weeder", "weekly", "weened", "xystoi", "xystos", "xystus", "yabber", "yabbie", "yachts", "yacked", "yaffed",
-    "yagers", "yahoos", "yairds", "yakked", "yakker", "yakuza", "zigged", "zigzag", "zillah", "zinced", "zincic",
-    "zincky", "zinebs", "zinged", "zinger", "zinnia", "zipped", "zipper", "zirams", "zircon" };
-  cimg::srand();
-  const char *const captcha_text = predef_words[std::rand()%(sizeof(predef_words)/sizeof(char*))];
+  const char *const captcha_text = generate_random_captcha(5).c_str();
 
   // Create captcha image
   //----------------------
